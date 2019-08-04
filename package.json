@@ -24,6 +24,10 @@
     "image-downloader": "^3.4.2",
     "readline-sync": "^1.4.9",
     "sbd": "^1.0.14",
-    "watson-developer-cloud": "^3.18.2"
+    "watson-developer-cloud": "^3.18.2",
+    "@ffmpeg-installer/ffmpeg": "^1.0.17",
+    "@ffprobe-installer/ffprobe": "^1.0.10",
+    "videoshow": "^0.1.11",
+    "fluent-ffmpeg": "^2.1.2"
   }
 }

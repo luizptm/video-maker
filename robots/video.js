@@ -1,21 +1,62 @@
-const gm = require('gm').subClass({imageMagick: true})
-const state = require('./state.js')
-const spawn = require('child_process').spawn
-const path = require('path')
-const rootPath = path.resolve(__dirname, '..')
+const gm = require("gm").subClass({ imageMagick: true });
+const state = require("./state.js");
+const spawn = require("child_process").spawn;
+const path = require("path");
+const rootPath = path.resolve(__dirname, "..");
+const videoshow = require("videoshow");
+const ffmpegPath = require("@ffmpeg-installer/ffmpeg").path;
+const ffprobePath = require("@ffprobe-installer/ffprobe").path;
+let ffmpeg = require("fluent-ffmpeg");
+ffmpeg.setFfmpegPath(ffmpegPath);
+ffmpeg.setFfprobePath(ffprobePath);
 
 
 async function robot() {
   console.log('> [video-robot] Starting...')
-  const content = state.load()
+  const content = state.load();
 
-  await convertAllImages(content)
-  await createAllSentenceImages(content)
-  await createYouTubeThumbnail()
-  await createAfterEffectsScript(content)
-  await renderVideoWithAfterEffects()
+  (async function() {
+    try {
+      await convertAllImages(content)
+    } catch(err) {
+        console.log(err);
+    }
+  })();
 
-  state.save(content)
+  (async function() {
+    try {
+      await createAllSentenceImages(content)
+    } catch(err) {
+      console.log(err);
+    }
+  })();
+
+  (async function() {
+    try {
+      await createYouTubeThumbnail()
+    } catch(err) {
+      console.log(err);
+    }
+  })();
+
+  (async function() {
+    try {
+      //await createAfterEffectsScript(content)
+    } catch(err) {
+      console.log(err);
+    }
+  })();
+
+  (async function() {
+    try {
+      //await renderVideoWithAfterEffects()
+      await renderVideoWithNode(content)
+    } catch(err) {
+      console.log(err);
+    }
+  })();
+
+  state.save(content);
 
   async function convertAllImages(content) {
     for (let sentenceIndex = 0; sentenceIndex < content.sentences.length; sentenceIndex++) {
@@ -143,7 +184,7 @@ async function robot() {
 
   async function renderVideoWithAfterEffects() {
     return new Promise((resolve, reject) => {
-      const aerenderFilePath = '/Applications/Adobe After Effects CC 2019/aerender'
+      const aerenderFilePath = 'C:/Program Files/Adobe/Adobe After Effects CC 2019/Support Files/aerender'
       const templateFilePath = `${rootPath}/templates/1/template.aep`
       const destinationFilePath = `${rootPath}/content/output.mov`
 
@@ -166,6 +207,72 @@ async function robot() {
     })
   }
 
+  async function renderVideoWithNode(content) {
+    return new Promise((resolve, reject) => {
+      console.log("> Renderizando vídeo com node.");
+
+      let images = [];
+
+      for (
+        let sentenceIndex = 0;
+        sentenceIndex < content.sentences.length;
+        sentenceIndex++
+      ) {
+        images.push({
+          path: `./content/${sentenceIndex}-converted.png`,
+          caption: content.sentences[sentenceIndex].text
+        });
+      }
+
+      const videoOptions = {
+        fps: 25,
+        loop: 5, // seconds
+        transition: true,
+        transitionDuration: 1, // seconds
+        videoBitrate: 1024,
+        videoCodec: "libx264",
+        size: "640x?",
+        audioBitrate: "128k",
+        audioChannels: 2,
+        format: "mp4",
+        pixelFormat: "yuv420p",
+        useSubRipSubtitles: false, // Use ASS/SSA subtitles instead
+        subtitleStyle: {
+          Fontname: "Verdana",
+          Fontsize: "26",
+          PrimaryColour: "11861244",
+          SecondaryColour: "11861244",
+          TertiaryColour: "11861244",
+          BackColour: "-2147483640",
+          Bold: "2",
+          Italic: "0",
+          BorderStyle: "2",
+          Outline: "2",
+          Shadow: "3",
+          Alignment: "1", // left, middle, right
+          MarginL: "40",
+          MarginR: "60",
+          MarginV: "40"
+        }
+      };
+
+      videoshow(images, videoOptions)
+        .audio("./templates/1/newsroom.mp3")
+        .save("content/output.mp4")
+        .on("start", function(command) {
+          console.log("> Processo ffmpeg iniciado:", command);
+        })
+        .on("error", function(err, stdout, stderr) {
+          console.error("Error:", err);
+          console.error("> ffmpeg stderr:", stderr);
+          reject(err);
+        })
+        .on("end", function(output) {
+          console.error("> Video criado:", output);
+          resolve();
+        });
+    });
+  }
 }
 
 module.exports = robot

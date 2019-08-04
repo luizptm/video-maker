@@ -39,7 +39,7 @@ async function robot() {
     }
 
     async function createOAuthClient() {
-      const credentials = require('../credentials/google-youtube.json')
+      const credentials = require('../credentials/youtube.json')
 
       const OAuthClient = new OAuth2(
         credentials.web.client_id,
